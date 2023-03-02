@@ -1,0 +1,13 @@
+#
+# Nuts & Bolts Dataset
+
+# Looks inside yolov5 folder so we need to guide for parent folder
+train: ../dataset/images/train/ 
+val: ../dataset/images/val/
+test: ../dataset/images/test/
+
+# Number of Classes
+nc: 2
+
+# Classes
+names: ["bolt", "nut"]
