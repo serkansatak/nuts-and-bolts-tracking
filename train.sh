@@ -109,4 +109,6 @@ python ${TRAIN_FILE} \
     --weights ${PRE_WEIGHTS} \
     --project ${PROJECT_DIR} \
     --hyp ${HYP_FILE} \
-    --device ${device}
+    --device ${device} \
+    --cache \
+    --freeze 20

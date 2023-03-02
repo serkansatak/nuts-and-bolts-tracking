@@ -26,7 +26,7 @@ def inference():
     
     t0 = time()
     
-    outVid = cv2.VideoWriter(os.path.join(VIDDIR, 'output.mp4'), cv2.VideoWriter_fourcc(*'DIVX'), 30, IMSIZE)
+    outVid = cv2.VideoWriter(os.path.join(VIDDIR, 'output.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 30, IMSIZE)
     
     frame_count = 0
     while cap.isOpened():
