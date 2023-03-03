@@ -3,15 +3,23 @@ import os
 import torch
 from time import time
 
+import numpy as np
 import cv2
 from similari import Sort, PositionalMetricType, BoundingBox # https://docs.rs/similari/latest/similari/
+
+from collections import namedtuple
+import sys
+
+from torchvision.ops import nms, box_iou
 
 
 ROOT = os.getcwd()
 TEST_IMAGE = os.path.join(ROOT, "../dataset/images/val/0865.jpg")
-IMSIZE = (640,640)
+
+IMSIZE = namedtuple('IMSIZE', ['W', 'H'])(640, 640)
 
 CLASS_LABELS = {0: "Bolt", 1: "Nut"}
+IMAGE_FORMATS = [".jpg", ".jpeg", ".png"]
 
 
 def inference():
@@ -73,14 +81,38 @@ def inference():
 
 
 
+def non_max_suppression(detections: torch.Tensor, biased: bool = False):
+    """
+    parameters:
+        detections -> np.ndarray[:,6] -> x1,x2,y1,y2,conf,cls
+    returns:
+        np.ndarray[:,6] -> x1,x2,y1,y2,conf,cls
+    
+    Summary:
+        
+    NMS might be class agnostic 
+    However we can choose nuts over bolts for sanity.
+    """
+    
+    det = detections.detach().clone()
+
+    if biased:
+        det[:,4][torch.where(det[:,-1] == 1)] *= args.nuts_bias
+
+    print(detections[nms(det[:,:4], det[:,4], args.iou)])
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--gst', action='store_true', help='GStreamer or Not')
     parser.add_argument('--weights', type=str, default=os.path.join(ROOT,'last.engine'), help='Detection weights.')
-    parser.add_argument('--input', type=str, required=True, help='Input video file')
-    parser.add_argument('--confidence', type=float, default=0.6, help='Confidence score for detections.')
+    parser.add_argument('--input', type=str, required=True, help='Input file')
+    parser.add_argument('--confidence', type=float, default=0.65, help='Confidence score for detections.')
     parser.add_argument('--iou', type=float, default=0.3, help='IoU threshold for tracker.')
     parser.add_argument('--outdir', type=str, default="./detections", help='Output directory')
+    parser.add_argument("--data-format", default="coco", choices=['coco', 'yolo'])
+    parser.add_argument("--nuts-bias", type=float, default=1.05)
+    parser.add_argument("--box_threshold", type=float, default=0.7)
     return parser.parse_args()
 
 
@@ -98,4 +130,5 @@ if __name__ == "__main__":
     os.makedirs(IMDIR, exist_ok=True)
     os.makedirs(VIDDIR, exist_ok=True)
     
-    inference()
+    validate("../dataset/images/val/0865.jpg", "../dataset/labels/val/0865.txt" )
+    #inference()

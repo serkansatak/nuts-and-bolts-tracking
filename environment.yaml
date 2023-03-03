@@ -436,4 +436,4 @@ dependencies:
       - xmltodict==0.13.0
       - yacs==0.1.8
       - zipp==3.13.0
-prefix: /home/serkan/miniconda3/envs/torch
+prefix: ${HOME}/miniconda3/envs/{{name}}
