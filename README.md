@@ -4,8 +4,6 @@
 </div>
 <br>
 
-
-
 # Nuts And Bolts Tracking
 
 Multi-Object Tracking on Nuts&Bolts Dataset with [YOLOv5](https://github.com/ultralytics/yolov5) + [SORT](https://github.com/insight-platform/Similari)
@@ -20,7 +18,7 @@ Project relies on official YOLOv5 algorithm and Rust's Similari library for SORT
 
 All detection related information can be found under runs/exp4
 
-In the following setup, tracking execution for only first frame is above 1/30 seconds.
+In the following setup, tracking execution for only first frame is above 1/30 seconds and rest is under 0.033 second for Nvidia MX450 GPU.
 
 
 
@@ -36,6 +34,8 @@ In the following setup, tracking execution for only first frame is above 1/30 se
 ```
 conda env create -f environment.yaml
 ```
+
+To install `similari` please follow the [link](https://github.com/insight-platform/Similari#build-python-api-in-host-system)
 
 
 * Project built and run on WSL2, details are as follows:
