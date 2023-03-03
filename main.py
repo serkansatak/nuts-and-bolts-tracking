@@ -24,16 +24,28 @@ IMAGE_FORMATS = [".jpg", ".jpeg", ".png"]
 
 def inference():
     
+    """
+    Load YOLOv5 with custom weights
+    """
+    
     detector = torch.hub.load('ultralytics/yolov5', 'custom', path=args.weights)
     detector.to('cuda')
     detector.float()
     detector.eval()
     
+    
+    """
+    Initialize the tracker
+    """
     tracker = Sort(shards=40, bbox_history=1, max_idle_epochs=35, method=PositionalMetricType.iou(threshold=args.iou))
     cap = cv2.VideoCapture(args.input)
     
     t0 = time()
     
+    
+    """
+    Initialize the video writer
+    """
     outVid = cv2.VideoWriter(os.path.join(VIDDIR, 'output.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 30, IMSIZE)
     
     frame_count = 0
@@ -43,10 +55,17 @@ def inference():
         ret, frame = cap.read()
         
         if ret:
+            """
+            Clear detections with low confidence
+            """
             detections = detector(frame).pred[0] 
             detections = detections[detections[:,4] > args.confidence]
             boxes = []
             
+            
+            """
+            Get BBoxes for detections and predict active tracks with tracker
+            """
             for (x1,y1,x2,y2,conf,cls) in detections:
                 w, h = x2-x1, y2-y1
                 box = BoundingBox(x1,y1,w,h).as_xyaah() # [x, y, angle, aspect, height]
@@ -55,6 +74,10 @@ def inference():
             active_tracks = tracker.predict(boxes)
             idle_tracks = tracker.idle_tracks()
             #active_tracks.extend(idle_tracks)
+            
+            """
+            Draw boxes and write ID's on frames.
+            """
             
             for (conf,cls), p in zip(detections.cpu().float().numpy()[:,-2:], active_tracks):
                 #print(cls , p)
@@ -66,6 +89,10 @@ def inference():
                 cv2.putText(frame, f'#{p.id} - {CLASS_LABELS[cls]} - {round(conf,1):.01}', (int(box.left), int(box.top)-10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
             
+            
+            """
+            Write out the video frame.
+            """
             outVid.write(frame)
             #cv2.imwrite(os.path.join(IMDIR, f"{frame_count:04}.jpg"),  frame)            
             
@@ -130,5 +157,4 @@ if __name__ == "__main__":
     os.makedirs(IMDIR, exist_ok=True)
     os.makedirs(VIDDIR, exist_ok=True)
     
-    validate("../dataset/images/val/0865.jpg", "../dataset/labels/val/0865.txt" )
-    #inference()
+    inference()
