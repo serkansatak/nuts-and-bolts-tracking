@@ -2,6 +2,7 @@ import argparse
 import os
 import torch
 from time import time
+import json
 
 import numpy as np
 import cv2
@@ -49,6 +50,10 @@ def inference():
     outVid = cv2.VideoWriter(os.path.join(VIDDIR, 'output.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 30, IMSIZE)
     
     frame_count = 0
+    detection_count = 0
+    
+    detections = []
+    
     while cap.isOpened():
 
         t1 = time()
@@ -88,6 +93,22 @@ def inference():
                             color=(0,255,0), thickness=2)
                 cv2.putText(frame, f'#{p.id} - {CLASS_LABELS[cls]} - {round(conf,1):.01}', (int(box.left), int(box.top)-10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                
+                if args.evaluate:
+                    detections.append(
+                        {
+                            "image_id": frame_count,
+                            "category_id": cls + 1,
+                            "segmentation": [],
+                            "bbox": box,
+                            "area": box.width * box.height,
+                            "iscrowd": 0,
+                            "id": detection_count,
+                            "track_id": p.id
+                        }
+                    )
+                
+                detection_count += 1
             
             
             """
@@ -105,7 +126,12 @@ def inference():
             break
         
     print(f"Average inference time per frame : {((time()-t0) / (frame_count+1)):.04f}")
-
+    
+    if args.evaluate:
+        with open(f"detections_{FILENAME}.json", "w") as jfile:
+            json.dump({"annotations": detections}, jfile, indent=4)
+            jfile.close()
+        
 
 
 def non_max_suppression(detections: torch.Tensor, biased: bool = False):
@@ -140,6 +166,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-format", default="coco", choices=['coco', 'yolo'])
     parser.add_argument("--nuts-bias", type=float, default=1.05)
     parser.add_argument("--box_threshold", type=float, default=0.7)
+    parser.add_argument("--evaluate", action='store_true', help= 'Evaluate detections vs annotations.')
     return parser.parse_args()
 
 
@@ -149,7 +176,9 @@ if __name__ == "__main__":
     global args
     args = parse_args()
     
-    global IMDIR, VIDDIR
+    global IMDIR, VIDDIR, FILENAME
+    
+    FILENAME = os.path.splitext(os.path.split(args.input)[-1])[0]
     
     IMDIR = os.path.join(args.outdir, "images")
     VIDDIR = os.path.join(args.outdir, "video")
