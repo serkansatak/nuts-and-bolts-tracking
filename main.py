@@ -13,6 +13,9 @@ import sys
 
 from torchvision.ops import nms, box_iou
 
+from evaluation import evaluate_mot
+
+
 
 ROOT = os.getcwd()
 TEST_IMAGE = os.path.join(ROOT, "../dataset/images/val/0865.jpg")
@@ -52,7 +55,7 @@ def inference():
     frame_count = 0
     detection_count = 0
     
-    detections = []
+    detections_list = []
     
     while cap.isOpened():
 
@@ -84,7 +87,9 @@ def inference():
             Draw boxes and write ID's on frames.
             """
             
-            for (conf,cls), p in zip(detections.cpu().float().numpy()[:,-2:], active_tracks):
+            detections = detections.cpu().float().numpy()
+            
+            for (conf,cls), p in zip(detections[:,-2:], active_tracks):
                 #print(cls , p)
                 box = p.predicted_bbox.as_ltwh() # [left, top, width, height]
                 cv2.rectangle(frame,
@@ -94,17 +99,19 @@ def inference():
                 cv2.putText(frame, f'#{p.id} - {CLASS_LABELS[cls]} - {round(conf,1):.01}', (int(box.left), int(box.top)-10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
                 
+                
                 if args.evaluate:
-                    detections.append(
+                    detections_list.append(
                         {
-                            "image_id": frame_count,
-                            "category_id": cls + 1,
+                            "image_id": int(frame_count),
+                            "category_id": int(cls) + 1,
                             "segmentation": [],
-                            "bbox": box,
-                            "area": box.width * box.height,
+                            "bbox": [float(box.left), float(box.top), float(box.width), float(box.height)],
+                            "area": float(box.width) * float(box.height),
                             "iscrowd": 0,
                             "id": detection_count,
-                            "track_id": p.id
+                            "track_id": int(p.id),
+                            "confidence": float(conf)
                         }
                     )
                 
@@ -128,9 +135,15 @@ def inference():
     print(f"Average inference time per frame : {((time()-t0) / (frame_count+1)):.04f}")
     
     if args.evaluate:
-        with open(f"detections_{FILENAME}.json", "w") as jfile:
-            json.dump({"annotations": detections}, jfile, indent=4)
+        
+        det_file = f"detections_{FILENAME}.json"
+        
+        with open(det_file, "w") as jfile:
+            json.dump({"annotations": detections_list}, jfile, indent=4)
             jfile.close()
+        
+        evaluate_mot(args.annotations, det_file)
+        
         
 
 
@@ -167,6 +180,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--nuts-bias", type=float, default=1.05)
     parser.add_argument("--box_threshold", type=float, default=0.7)
     parser.add_argument("--evaluate", action='store_true', help= 'Evaluate detections vs annotations.')
+    parser.add_argument("--annotations", type=str, help='Annotations file.')
     return parser.parse_args()
 
 
