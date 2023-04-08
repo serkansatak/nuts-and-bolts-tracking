@@ -110,5 +110,4 @@ python ${TRAIN_FILE} \
     --project ${PROJECT_DIR} \
     --hyp ${HYP_FILE} \
     --device ${device} \
-    --cache \
-    --freeze 20
+    --freeze 10
